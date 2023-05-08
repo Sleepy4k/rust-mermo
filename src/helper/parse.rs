@@ -1,5 +1,6 @@
-use tide::{Body, Response};
-use serde_json::{json, Map, Value};
+use serde::Serialize;
+use serde_json::{json};
+use tide::{Response, StatusCode};
 
 #[doc = "define the struct of the response"]
 #[derive(serde::Serialize)]
@@ -10,10 +11,10 @@ struct ServiceResponse {
 
 #[doc = "define the struct of the response with data"]
 #[derive(serde::Serialize)]
-struct ServiceResonseData {
+struct ServiceResonseData<T> {
     status: String,
     info: String,
-    data: Value
+    data: Vec<T>
 }
 
 #[doc = "function to convert vector of string to string"]
@@ -37,39 +38,35 @@ pub fn to_json(data: impl serde::Serialize) -> tide::Result<serde_json::Value> {
 
 #[doc = "function to create response"]
 pub fn response(status_val: &str, info_val: &str) -> tide::Result<Response> {
-    let mut res = Response::new(200);
-
-    let data = ServiceResponse {
-        status: status_val.into(),
-        info: info_val.into()
+    let response = ServiceResponse {
+        status: status_val.to_owned(),
+        info: info_val.to_owned(),
     };
 
-    let mut body = Map::new();
-    body.insert("status".into(), data.status.into());
-    body.insert("info".into(), data.info.into());
-    body.insert("data".into(), Value::Null);
+    let json = serde_json::to_string(&response).unwrap();
 
-    res.set_body(Body::from_json(&body)?);
+    let res = Response::builder(StatusCode::Ok)
+        .body(json)
+        .content_type("application/json")
+        .build();
 
     Ok(res)
 }
 
 #[doc = "function to create response with data"]
-pub fn response_with_data(status_val: &str, info_val: &str, value: Value) -> tide::Result<Response> {
-    let mut res = Response::new(200);
-
-    let data = ServiceResonseData {
-        status: status_val.into(),
-        info: info_val.into(),
-        data: Value
+pub fn response_with_data<T: Serialize>(status_val: &str, info_val: &str, data: Vec<T>) -> tide::Result<Response> {
+    let response = ServiceResonseData {
+        status: status_val.to_owned(),
+        info: info_val.to_owned(),
+        data,
     };
 
-    let mut body = Map::new();
-    body.insert("status".into(), data.status.into());
-    body.insert("info".into(), data.info.into());
-    body.insert("data".into(), data.data);
+    let json = serde_json::to_string(&response).unwrap();
 
-    res.set_body(Body::from_json(&body)?);
+    let res = Response::builder(StatusCode::Ok)
+        .body(json)
+        .content_type("application/json")
+        .build();
 
     Ok(res)
 }
