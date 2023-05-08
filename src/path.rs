@@ -5,6 +5,7 @@ use crate::{
 use sqlx::{Pool, Postgres};
 use tide::{Server};
 
+#[doc = "Path for spare part and product"]
 pub async fn path(app: &mut Server<Pool<Postgres>>) {
     app.at("/spare_part")
         .get(get_spare_part)
