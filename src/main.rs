@@ -26,8 +26,10 @@ async fn main() -> tide::Result<()> {
     let mut app = tide::with_state(pool.clone());
 
     app.with(cors);
+    
     path(&mut app);
 
     app.listen("127.0.0.1:7004").await?;
+
     Ok(())
 }
