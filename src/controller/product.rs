@@ -1,6 +1,6 @@
 use sqlx::{PgPool};
+use tide::{Request, Response};
 use crate::{response, response_with_data};
-use tide::{Body, Request, Response};
 
 #[doc = "Define the struct of the parameter for \"find_product\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -19,8 +19,8 @@ struct DelParam {
 pub struct Product {
     pub id: Option<i32>,
     pub name: Option<String>,
-    pub amount:Option<i32>,
-    pub price:Option<i32>
+    pub amount: Option<i32>,
+    pub price: Option<i32>
 }
 
 #[doc = "function to get all product"]
@@ -33,7 +33,7 @@ pub async fn get_product(req: Request<PgPool>) -> tide::Result<Response> {
                 "select id, name, amount, price from product;")
                 .fetch_all(pool).await?;
 
-            response_with_data("OK", "berhasil menampilkan data", prod)
+            response_with_data("OK", "berhasil menampilkan product", prod)
         }
         Err(e) => {
             eprintln!("Error get: {:?}", e);
@@ -54,7 +54,11 @@ pub async fn add_product(mut req: Request<PgPool>) -> tide::Result<Response> {
         .bind(param.price)
         .execute(pool).await {
             Ok(row) => {response("OK", "berhasil menambahkan product")}
-            Err(e) => {response("ERROR", "gagal menambahkan product")}
+            Err(e) => {
+                eprintln!("Error add: {:?}", e);
+
+                response("ERROR", "gagal menambahkan product")
+            }
         }
 }
 
@@ -91,10 +95,10 @@ pub async fn update_product(mut req:Request<PgPool>) -> tide::Result<Response> {
         .bind(param.price)
         .bind(param.id)
         .execute(pool).await {
-            Ok(row) => {
-                response("OK", "berhasil mengubah product")
-            }
+            Ok(row) => {response("OK", "berhasil mengubah product")}
             Err(e) => {
+                eprintln!("Error update: {:?}", e);
+
                 response("ERROR", "gagal mengubah product")
             }
         }
@@ -104,8 +108,8 @@ pub async fn update_product(mut req:Request<PgPool>) -> tide::Result<Response> {
 pub async fn delete_product(req: Request<PgPool>) -> tide::Result<Response> {
     match req.query() {
         Ok(param) => {
-            let param: DelParam = param;
             let pool = req.state();
+            let param: DelParam = param;
 
             match sqlx::query("delete from product where id=$1;")
                 .bind(param.id)
