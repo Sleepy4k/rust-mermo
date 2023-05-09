@@ -2,6 +2,21 @@ use sqlx::{PgPool};
 use tide::{Request, Response};
 use crate::{response, response_with_data};
 
+#[doc = "Define the struct of the parameter for \"get_spare_part\", \"find_spare_part\", \"update_spare_part\""]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SparePart {
+    pub id: i32,
+    pub name: String,
+    pub price: i32
+}
+
+#[doc = "Define the struct of the parameter for \"add_spare_part\""]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct AddSparePart {
+    pub name: String,
+    pub price: i32
+}
+
 #[doc = "Define the struct of the parameter for \"find_spare_part\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct FindParam {
@@ -14,44 +29,27 @@ struct DelParam {
     id: i32,
 }
 
-#[doc = "Define the struct of the parameter for \"get_spare_part\", \"add_spare_part\", \"find_spare_part\", \"update_spare_part\""]
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct SparePart {
-    pub id: Option<i32>,
-    pub name: Option<String>,
-    pub price: Option<i32>
-}
-
 #[doc = "function to get all spare part"]
 pub async fn get_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
-    match req.query() {
-        Ok(param) => {
-            let pool = req.state();
+    let pool = req.state();
 
-            let mut sparepart: Vec<SparePart> = sqlx::query_as!(SparePart,
-                "select id, name, price from spare_part;")
-                .fetch_all(pool).await?;
-        
-            response_with_data("OK", "berhasil menampilkan spare part", sparepart)
-        }
-        Err(e) => {
-            eprintln!("Error get: {:?}", e);
-            
-            response("ERROR", "gagal menampilkan spare part")
-        }
-    }
+    let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part")
+        .fetch_all(pool)
+        .await?;
+
+    response_with_data("OK", "berhasil menampilkan spare part", sparepart)
 }
 
 #[doc = "function to add spare part"]
 pub async fn add_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> {
-    let param: SparePart = req.body_json().await?;
+    let param: AddSparePart = req.body_json().await?;
     let pool = req.state();
 
-    match sqlx::query("insert into spare_part (name, price) values ($1, $2);")
+    match sqlx::query("insert into spare_part (name, price) values ($1, $2)")
         .bind(param.name)
         .bind(param.price)
         .execute(pool).await {
-            Ok(row) => {response("OK", "berhasil menambahkan spare part")}
+            Ok(_x) => {response("OK", "berhasil menambahkan spare part")}
             Err(e) => {
                 eprintln!("Error add: {:?}", e);
 
@@ -61,25 +59,15 @@ pub async fn add_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> 
 }
 
 #[doc = "function to find spare part"]
-pub async fn find_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
-    match req.query() {
-        Ok(param) => {
-            let pool = req.state();
-            let param: FindParam = param;
+pub async fn find_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> {
+    let param: FindParam = req.body_json().await?;
+    let pool = req.state();
 
-            let mut sparepart: Vec<SparePart> = sqlx::query_as!(SparePart,
-                "select id, name, price from spare_part where id=$1;")
-                .bind(param.id)
-                .fetch_all(pool).await?;
+    let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part where id = $1", param.id)
+        .fetch_all(pool)
+        .await?;
 
-            response_with_data("OK", "berhasil menampilkan spare part", sparepart)
-        }
-        Err(e) => {
-            eprintln!("Error find: {:?}", e);
-
-            response("ERROR", "gagal menampilkan spare part")
-        }
-    }
+    response_with_data("OK", "berhasil menampilkan spare part", sparepart)
 }
 
 #[doc = "function to update spare part"]
@@ -87,12 +75,12 @@ pub async fn update_spare_part(mut req:Request<PgPool>) -> tide::Result<Response
     let param: SparePart = req.body_json().await?;
     let pool = req.state();
 
-    match sqlx::query("update spare_part set name=$1, price=$2 where id=$3;")
+    match sqlx::query("update spare_part set name = $1, price = $2 where id = $3;")
         .bind(param.name)
         .bind(param.price)
         .bind(param.id)
         .execute(pool).await {
-            Ok(row) => {response("OK", "berhasil mengubah spare part")}
+            Ok(_x) => {response("OK", "berhasil mengubah spare part")}
             Err(e) => {
                 eprintln!("Error update: {:?}", e);
 
@@ -102,27 +90,18 @@ pub async fn update_spare_part(mut req:Request<PgPool>) -> tide::Result<Response
 }
 
 #[doc = "function to delete spare part"]
-pub async fn delete_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
-    match req.query() {
-        Ok(param) => {
-            let pool = req.state();
-            let param: DelParam = param;
+pub async fn delete_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> {
+    let param: DelParam = req.body_json().await?;
+    let pool = req.state();
 
-            match sqlx::query("delete from spare_part where id=$1;")
-                .bind(param.id)
-                .execute(pool).await {
-                    Ok(row) => {response("OK", "berhasil menghapus spare part")},
-                    Err(e) => {
-                        eprintln!("Error query: {}", e);
+    match sqlx::query("delete from spare_part where id=$1;")
+        .bind(param.id)
+        .execute(pool).await {
+            Ok(_x) => {response("OK", "berhasil menghapus spare part")},
+            Err(e) => {
+                eprintln!("Error query: {}", e);
 
-                        response("ERROR", "gagal menghapus spare part")
-                    }
-                }
+                response("ERROR", "gagal menghapus spare part")
+            }
         }
-        Err(e) => {
-            eprintln!("Error delete: {:?}", e);
-
-            response("ERROR", "gagal menghapus spare part")
-        }
-    }
 }

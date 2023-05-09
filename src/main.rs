@@ -27,9 +27,9 @@ async fn main() -> tide::Result<()> {
 
     app.with(cors);
     
-    path(&mut app);
+    path(&mut app).await;
 
-    app.listen("127.0.0.1:7004").await?;
+    app.listen("0.0.0.0:7004").await?;
 
     Ok(())
 }

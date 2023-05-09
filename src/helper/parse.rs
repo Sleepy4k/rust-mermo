@@ -7,6 +7,7 @@ use tide::{Response, StatusCode};
 struct ServiceResponse {
     status: String,
     info: String,
+    data: String
 }
 
 #[doc = "define the struct of the response with data"]
@@ -41,6 +42,7 @@ pub fn response(status_val: &str, info_val: &str) -> tide::Result<Response> {
     let response = ServiceResponse {
         status: status_val.to_owned(),
         info: info_val.to_owned(),
+        data: String::new(),
     };
 
     let json = serde_json::to_string(&response).unwrap();
