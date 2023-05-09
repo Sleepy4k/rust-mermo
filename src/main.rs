@@ -1,5 +1,5 @@
+use mermo::path;
 use sqlx::PgPool;
-use mermo::{path};
 use dotenv::dotenv;
 use tide::http::headers::HeaderValue;
 use tide::security::{CorsMiddleware, Origin};

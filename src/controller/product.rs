@@ -1,4 +1,4 @@
-use sqlx::{PgPool};
+use sqlx::PgPool;
 use tide::{Request, Response};
 use crate::{response, response_with_data};
 
