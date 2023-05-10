@@ -19,6 +19,14 @@ struct ServiceResonseData<T> {
     data: Vec<T>
 }
 
+#[doc = "define the struct of the response with data and cookie"]
+#[derive(serde::Serialize)]
+struct ServiceResonseDataAndCookie {
+    status: String,
+    info: String,
+    data: Value
+}
+
 #[doc = "function to convert vector of string to string"]
 pub fn vec_to_string(vec: Vec<&str>) -> String {
     let mut res = String::new();
@@ -75,7 +83,7 @@ pub fn response_with_data<T: Serialize>(status_val: &str, info_val: &str, data: 
 }
 
 #[doc = "function to create response with cookie"]
-pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str, cookie_data: Cookie) -> tide::Result<Response>  {
+pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str, cookie_title: &str, cookie_data: String) -> tide::Result<Response>  {
     let response = ServiceResponse {
         status: status_val.to_owned(),
         info: info_val.to_owned(),
@@ -86,10 +94,19 @@ pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str,
 
     let mut response = Response::new(StatusCode::Ok);
     
+    let title = cookie_title.to_owned();
+    let data = cookie_data.to_owned();
+
+    let mut cookies = Cookie::new(title, data);
+    cookies.set_path("/");
+    cookies.set_http_only(false);
+    cookies.set_secure(true);
+    cookies.set_same_site(tide::http::cookies::SameSite::Strict);
+
     if cookie_type == "remove" {
-        response.remove_cookie(cookie_data);
+        response.remove_cookie(cookies);
     } else if cookie_type == "insert" {
-        response.insert_cookie(cookie_data);
+        response.insert_cookie(cookies);
     }
 
     response.set_body(json);
@@ -99,21 +116,30 @@ pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str,
 }
 
 #[doc = "function to create response with data and cookie"]
-pub fn response_with_data_and_cookie(status_val: &str, info_val: &str, value: Value, cookie_type: &str, cookie_data: Cookie) -> tide::Result<Response> {
-    let body = ServiceResponse {
+pub fn response_with_data_and_cookie<T: Serialize>(status_val: &str, info_val: &str, data: Vec<T>, cookie_type: &str, cookie_title: &str, cookie_data: String) -> tide::Result<Response> {
+    let body = ServiceResonseData {
         status: status_val.to_owned(),
         info: info_val.to_owned(),
-        data: value,
+        data,
     };
 
     let json = serde_json::to_string(&body).unwrap();
 
     let mut response = Response::new(StatusCode::Ok);
     
+    let title = cookie_title.to_owned();
+    let data = cookie_data.to_owned();
+
+    let mut cookies = Cookie::new(title, data);
+    cookies.set_path("/");
+    cookies.set_http_only(false);
+    cookies.set_secure(true);
+    cookies.set_same_site(tide::http::cookies::SameSite::Strict);
+
     if cookie_type == "remove" {
-        response.remove_cookie(cookie_data);
+        response.remove_cookie(cookies);
     } else if cookie_type == "insert" {
-        response.insert_cookie(cookie_data);
+        response.insert_cookie(cookies);
     }
 
     response.set_body(json);
