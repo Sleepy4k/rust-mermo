@@ -1,6 +1,6 @@
-use mermo::path;
 use sqlx::PgPool;
 use dotenv::dotenv;
+use mermo::{path, user_token};
 use tide::http::headers::HeaderValue;
 use tide::security::{CorsMiddleware, Origin};
 
@@ -26,6 +26,7 @@ async fn main() -> tide::Result<()> {
     let mut app = tide::with_state(pool.clone());
 
     app.with(cors);
+    app.with(user_token);
     
     path(&mut app).await;
 
