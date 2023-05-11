@@ -29,15 +29,29 @@ struct DelParam {
     id: i32,
 }
 
-#[doc = "function to get all spare part"]
-pub async fn get_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
-    let pool = req.state();
+#[doc = "function to get or find product"]
+pub async fn get_or_find_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
+    match req.query() {
+        Ok(query_param) => {
+            let param: FindParam = query_param;
+            let pool = req.state();
 
-    let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part")
-        .fetch_all(pool)
-        .await?;
+            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part where id = $1", param.id)
+                .fetch_all(pool)
+                .await?;
 
-    response_with_data("OK", "berhasil menampilkan spare part", sparepart)
+            response_with_data("OK", "berhasil menampilkan spare part", sparepart)
+        },
+        Err(_) => {
+            let pool = req.state();
+
+            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part")
+                .fetch_all(pool)
+                .await?;
+
+            response_with_data("OK", "berhasil menampilkan spare part", sparepart)
+        }
+    }
 }
 
 #[doc = "function to add spare part"]
@@ -56,18 +70,6 @@ pub async fn add_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> 
                 response("ERROR", "gagal menambahkan spare part")
             }
         }
-}
-
-#[doc = "function to find spare part"]
-pub async fn find_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> {
-    let param: FindParam = req.body_json().await?;
-    let pool = req.state();
-
-    let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part where id = $1", param.id)
-        .fetch_all(pool)
-        .await?;
-
-    response_with_data("OK", "berhasil menampilkan spare part", sparepart)
 }
 
 #[doc = "function to update spare part"]

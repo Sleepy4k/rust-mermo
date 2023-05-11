@@ -31,15 +31,29 @@ struct DelParam {
     id: i32,
 }
 
-#[doc = "function to get all product"]
-pub async fn get_product(req: Request<PgPool>) -> tide::Result<Response> {
-    let pool = req.state();
+#[doc = "function to get or find product"]
+pub async fn get_or_find_product(req: Request<PgPool>) -> tide::Result<Response> {
+    match req.query() {
+        Ok(query_param) => {
+            let param: FindParam = query_param;
+            let pool = req.state();
 
-    let prod: Vec<Product> = sqlx::query_as!(Product, "select * from product")
-        .fetch_all(pool)
-        .await?;
+            let prod: Vec<Product> = sqlx::query_as!(Product, "select * from product where id = $1", param.id)
+                .fetch_all(pool)
+                .await?;
 
-    response_with_data("OK", "berhasil menampilkan product", prod)
+            response_with_data("OK", "berhasil menampilkan detail data", prod)
+        },
+        Err(_) => {
+            let pool = req.state();
+
+            let prod: Vec<Product> = sqlx::query_as!(Product, "select * from product")
+                .fetch_all(pool)
+                .await?;
+
+            response_with_data("OK", "berhasil menampilkan product", prod)
+        }
+    }
 }
 
 #[doc = "function to add product"]
@@ -59,18 +73,6 @@ pub async fn add_product(mut req: Request<PgPool>) -> tide::Result<Response> {
                 response("ERROR", "gagal menambahkan product")
             }
         }
-}
-
-#[doc = "function to find product"]
-pub async fn find_product(mut req: Request<PgPool>) -> tide::Result<Response> {
-    let param: FindParam = req.body_json().await?;
-    let pool = req.state();
-
-    let prod: Vec<Product> = sqlx::query_as!(Product, "select * from product where id = $1", param.id)
-        .fetch_all(pool)
-        .await?;
-
-    response_with_data("OK", "berhasil menampilkan detail data", prod)
 }
 
 #[doc = "function to update product"]

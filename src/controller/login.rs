@@ -1,27 +1,30 @@
 use std::env;
 use sqlx::PgPool;
+use bcrypt::verify;
 use tide::{Request, Response};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use bcrypt::{hash, verify, DEFAULT_COST};
 use jsonwebtoken::{encode, Header, EncodingKey};
 use crate::{response, response_with_data_and_cookie};
 
+#[doc = "Define the struct of the request body"]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 struct SigninRequest {
     username: String,
     password: String
 }
 
+#[doc = "Define the struct of the token"]
 #[derive(Serialize, Deserialize, Debug)]
-struct Token {
-    id: i32,
-    role: String,
-    username: String,
-    iat: u64,
-    exp: u64,
+pub struct Token {
+    pub id: i32,
+    pub role: String,
+    pub username: String,
+    pub iat: u64,
+    pub exp: u64,
 }
 
+#[doc = "Define the struct of the user"]
 #[derive(Serialize, Deserialize, Debug)]
 struct User {
     id: i32,
@@ -30,6 +33,7 @@ struct User {
     role: String,
 }
 
+#[doc = "Define the struct of the detail user"]
 #[derive(Serialize, Deserialize, Debug)]
 struct DetailUser {
     id: i32,
@@ -37,6 +41,7 @@ struct DetailUser {
     role: String,
 }
 
+#[doc = "Define the login function"]
 pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
     let body: SigninRequest = req.body_json().await?;
     let pool = req.state();
@@ -56,9 +61,7 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
             },
         };
 
-    let hashed_password = hash(body.password.clone(), DEFAULT_COST).unwrap();
-
-    let password_match = verify(user.password, &hashed_password).unwrap_or(false);
+    let password_match = verify(body.password.clone(), &user.password).unwrap_or(false);
 
     if password_match {
         let claims = Token {
@@ -73,7 +76,7 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs()
-                .saturating_add(60 * 60), // Token is valid for 1 hour
+                .saturating_add(60 * 60),
         };
 
         let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
@@ -86,7 +89,7 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
             role: user.role.clone(),
         };
 
-        return response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "token", token)
+        return response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "auth_jwt_secret", token)
     } else {
         return response("ERROR", "password not match")
     }
