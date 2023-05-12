@@ -6,6 +6,7 @@ pub fn vec_to_string(vec: Vec<&str>) -> String {
 
     for (i, el) in vec.into_iter().enumerate() {
         if i != 0 {res.push_str(",")}
+        
         res.push_str("'");
         res.push_str(el);
         res.push_str("'");
@@ -16,5 +17,7 @@ pub fn vec_to_string(vec: Vec<&str>) -> String {
 
 #[doc = "function to convert any type to json"]
 pub fn to_json(data: impl serde::Serialize) -> tide::Result<serde_json::Value> {
-    Ok( json!(data) )
+    let data = json!(data);
+
+    Ok(data)
 }

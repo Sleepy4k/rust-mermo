@@ -1,7 +1,6 @@
 use serde::Serialize;
-use serde_json::Value;
 use tide::{Response, StatusCode};
-use tide::http::cookies::Cookie;
+use tide::http::cookies::{Cookie, SameSite};
 
 #[doc = "define the struct of the response"]
 #[derive(serde::Serialize)]
@@ -17,14 +16,6 @@ struct ServiceResonseData<T> {
     status: String,
     info: String,
     data: Vec<T>
-}
-
-#[doc = "define the struct of the response with data and cookie"]
-#[derive(serde::Serialize)]
-struct ServiceResonseDataAndCookie {
-    status: String,
-    info: String,
-    data: Value
 }
 
 #[doc = "function to create response"]
@@ -82,7 +73,7 @@ pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str,
     cookies.set_path("/");
     cookies.set_http_only(false);
     cookies.set_secure(true);
-    cookies.set_same_site(tide::http::cookies::SameSite::Strict);
+    cookies.set_same_site(SameSite::Strict);
 
     if cookie_type == "remove" {
         response.remove_cookie(cookies);
@@ -115,7 +106,7 @@ pub fn response_with_data_and_cookie<T: Serialize>(status_val: &str, info_val: &
     cookies.set_path("/");
     cookies.set_http_only(false);
     cookies.set_secure(true);
-    cookies.set_same_site(tide::http::cookies::SameSite::Strict);
+    cookies.set_same_site(SameSite::Strict);
 
     if cookie_type == "remove" {
         response.remove_cookie(cookies);
