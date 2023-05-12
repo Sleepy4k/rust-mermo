@@ -11,7 +11,9 @@ pub fn user_token<'a>(
     next:        Next<'a, PgPool>,
 ) -> Pin<Box<dyn Future<Output = tide::Result> + Send + 'a>> {
     Box::pin(async {
-        if request.url().path() == "/" || request.url().path().starts_with("/register") || request.url().path().starts_with("/login") {
+        let path = request.url().path().to_string();
+
+        if path == "/" || path == "/register" || path == "/login" {
             return Ok(next.run(request).await);
         }
 
