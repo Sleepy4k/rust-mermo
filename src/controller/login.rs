@@ -46,20 +46,20 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
     let body: SigninRequest = req.body_json().await?;
     let pool = req.state();
 
-    let user = match sqlx::query!("select * from client where username = $1", body.username)
-        .fetch_one(pool)
-        .await
-        {
-            Ok(user) => user,
-            Err(sqlx::Error::RowNotFound) => {
-                return response("ERROR", "username not found")
-            }
-            Err(err) => {
-                eprintln!("Error login: {:?}", err);
+    let user = match sqlx::query!(
+        "select * from client where username = $1",
+        body.username
+    ).fetch_one(pool).await {
+        Ok(user) => user,
+        Err(sqlx::Error::RowNotFound) => {
+            return response("ERROR", "username not found")
+        }
+        Err(err) => {
+            eprintln!("Error login: {:?}", err);
 
-                return response("Error", "something went wrong")
-            },
-        };
+            return response("Error", "something went wrong")
+        },
+    };
 
     let password_match = verify(body.password.clone(), &user.password).unwrap_or(false);
 
@@ -89,8 +89,8 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
             role: user.role.clone(),
         };
 
-        return response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "auth_jwt_secret", token)
+        response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "auth_jwt_secret", token)
     } else {
-        return response("ERROR", "password not match")
+        response("ERROR", "password not match")
     }
 }

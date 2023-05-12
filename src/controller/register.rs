@@ -3,13 +3,15 @@ use crate::response;
 use tide::{Request, Response};
 use bcrypt::{hash, DEFAULT_COST};
 
+#[doc = "Define the struct for validate request body of \"register\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-struct SignupRequest {
+struct RegisterRequest {
     username: String,
     password: String,
     role: String,
 }
 
+#[doc = "Define the struct for response body of \"register\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 struct DetailUser {
     id: i32,
@@ -17,8 +19,9 @@ struct DetailUser {
     role: String,
 }
 
+#[doc = "function to register user"]
 pub async fn register(mut req: Request<PgPool>) -> tide::Result<Response> {
-    let body: SignupRequest = req.body_json().await?;
+    let body: RegisterRequest = req.body_json().await?;
     let pool = req.state();
 
     let user_check = sqlx::query!(
@@ -33,18 +36,14 @@ pub async fn register(mut req: Request<PgPool>) -> tide::Result<Response> {
     let hashed_password = hash(body.password, DEFAULT_COST)?;
 
     match sqlx::query!(
-        "INSERT INTO client (username, password, role) VALUES ($1, $2, $3)",
-        body.username,
-        hashed_password,
-        body.role
+        "insert into client (username, password, role) values ($1, $2, $3)",
+        body.username, hashed_password, body.role
     ).execute(pool).await {
-        Ok(_) => {
-            return response("OK", "berhasil signup");
-        },
+        Ok(_) => {response("OK", "berhasil signup")},
         Err(e) => {
             eprintln!("Error register: {}", e);
 
-            return response("ERROR", "failed to signup");
+            response("ERROR", "failed to signup")
         }
     }
 }

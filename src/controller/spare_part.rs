@@ -2,30 +2,30 @@ use sqlx::PgPool;
 use tide::{Request, Response};
 use crate::{response, response_with_data};
 
-#[doc = "Define the struct of the parameter for \"get_spare_part\", \"find_spare_part\", \"update_spare_part\""]
+#[doc = "Define the struct of the parameter for \"get_or_find_spare_part\", \"update_spare_part\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct SparePart {
-    pub id: i32,
-    pub name: String,
-    pub price: i32
+struct SparePart {
+    id: i32,
+    name: String,
+    price: i32
+}
+
+#[doc = "Define the struct of the parameter for \"get_or_find_spare_part\""]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct FindSparePart {
+    id: i32,
 }
 
 #[doc = "Define the struct of the parameter for \"add_spare_part\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct AddSparePart {
-    pub name: String,
-    pub price: i32
-}
-
-#[doc = "Define the struct of the parameter for \"find_spare_part\""]
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct FindParam {
-    id: i32,
+struct AddSparePart {
+    name: String,
+    price: i32
 }
 
 #[doc = "Define the struct of the parameter for \"delete_spare_part\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct DelParam {
+struct DeleteSparePart {
     id: i32,
 }
 
@@ -33,21 +33,22 @@ struct DelParam {
 pub async fn get_or_find_spare_part(req: Request<PgPool>) -> tide::Result<Response> {
     match req.query() {
         Ok(query_param) => {
-            let param: FindParam = query_param;
+            let param: FindSparePart = query_param;
             let pool = req.state();
 
-            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part where id = $1", param.id)
-                .fetch_all(pool)
-                .await?;
+            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart,
+                "select * from spare_part where id = $1",
+                param.id
+            ).fetch_all(pool).await?;
 
             response_with_data("OK", "berhasil menampilkan spare part", sparepart)
         },
         Err(_) => {
             let pool = req.state();
 
-            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart, "select * from spare_part")
-                .fetch_all(pool)
-                .await?;
+            let sparepart: Vec<SparePart> = sqlx::query_as!(SparePart,
+                "select * from spare_part"
+            ).fetch_all(pool).await?;
 
             response_with_data("OK", "berhasil menampilkan spare part", sparepart)
         }
@@ -59,17 +60,17 @@ pub async fn add_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> 
     let param: AddSparePart = req.body_json().await?;
     let pool = req.state();
 
-    match sqlx::query("insert into spare_part (name, price) values ($1, $2)")
-        .bind(param.name)
-        .bind(param.price)
-        .execute(pool).await {
-            Ok(_x) => {response("OK", "berhasil menambahkan spare part")}
-            Err(e) => {
-                eprintln!("Error add: {:?}", e);
+    match sqlx::query!(
+        "insert into spare_part (name, price) values ($1, $2)",
+        param.name, param.price
+    ).execute(pool).await {
+        Ok(_x) => {response("OK", "berhasil menambahkan spare part")}
+        Err(e) => {
+            eprintln!("Error add: {:?}", e);
 
-                response("ERROR", "gagal menambahkan spare part")
-            }
+            response("ERROR", "gagal menambahkan spare part")
         }
+    }
 }
 
 #[doc = "function to update spare part"]
@@ -77,33 +78,33 @@ pub async fn update_spare_part(mut req:Request<PgPool>) -> tide::Result<Response
     let param: SparePart = req.body_json().await?;
     let pool = req.state();
 
-    match sqlx::query("update spare_part set name = $1, price = $2 where id = $3;")
-        .bind(param.name)
-        .bind(param.price)
-        .bind(param.id)
-        .execute(pool).await {
-            Ok(_x) => {response("OK", "berhasil mengubah spare part")}
-            Err(e) => {
-                eprintln!("Error update: {:?}", e);
+    match sqlx::query!(
+        "update spare_part set name = $1, price = $2 where id = $3",
+        param.name, param.price, param.id
+    ).execute(pool).await {
+        Ok(_x) => {response("OK", "berhasil mengubah spare part")}
+        Err(e) => {
+            eprintln!("Error update: {:?}", e);
 
-                response("ERROR", "gagal mengubah spare part")
-            }
+            response("ERROR", "gagal mengubah spare part")
         }
+    }
 }
 
 #[doc = "function to delete spare part"]
 pub async fn delete_spare_part(mut req: Request<PgPool>) -> tide::Result<Response> {
-    let param: DelParam = req.body_json().await?;
+    let param: DeleteSparePart = req.body_json().await?;
     let pool = req.state();
 
-    match sqlx::query("delete from spare_part where id=$1;")
-        .bind(param.id)
-        .execute(pool).await {
-            Ok(_x) => {response("OK", "berhasil menghapus spare part")},
-            Err(e) => {
-                eprintln!("Error query: {}", e);
+    match sqlx::query!(
+        "delete from spare_part where id = $1",
+        param.id
+    ).execute(pool).await {
+        Ok(_x) => {response("OK", "berhasil menghapus spare part")}
+        Err(e) => {
+            eprintln!("Error delete: {:?}", e);
 
-                response("ERROR", "gagal menghapus spare part")
-            }
+            response("ERROR", "gagal menghapus spare part")
         }
+    }
 }
