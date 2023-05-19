@@ -8,9 +8,9 @@ use tide::security::{CorsMiddleware, Origin};
 async fn main() -> tide::Result<()> {
     dotenv().ok();
 
-    let pool = PgPool::connect(&std::env::var("DATABASE_URL").expect("DB config error"))
-        .await
-        .expect("DB Connection error");
+    let db_url = std::env::var("DATABASE_URL").expect("DB config error");
+
+    let pool = PgPool::connect(&db_url).await.expect("DB Connection error");
 
     let cors = CorsMiddleware::new()
         .allow_methods(
@@ -19,7 +19,7 @@ async fn main() -> tide::Result<()> {
                 .unwrap(),
         )
         .allow_origin(Origin::from("*"))
-        .allow_credentials(false);
+        .allow_credentials(true);
 
     tide::log::start();
 
