@@ -31,11 +31,11 @@ pub fn user_token<'a>(
                     Ok(token_data) => {
                         let method = request.method().to_string();
                         
-                        if token_data.claims.role == "user" && request.url().path().starts_with("/user") {
+                        if token_data.claims.role == "user" && path.starts_with("/user") {
                             return response("Forbidden", "Admin only!")
                         }
 
-                        if token_data.claims.role == "user" && method == "POST".to_string() {
+                        if token_data.claims.role == "user" && method == "POST".to_string() && path != "/logout" {
                             return response("Forbiden", "You Don't Have Permission")    
                         }
                         
