@@ -15,6 +15,7 @@ async fn main() -> tide::Result<()> {
     let cors = CorsMiddleware::new()
         .allow_methods("GET, POST, PUT, DELETE, OPTIONS".parse::<HeaderValue>().unwrap())
         .allow_origin(Origin::from("http://localhost:3000"))
+        .allow_headers("Content-Type".parse::<HeaderValue>().unwrap())
         .allow_credentials(true);
 
     tide::log::start();
