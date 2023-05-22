@@ -23,11 +23,11 @@ async fn main() -> tide::Result<()> {
     let mut app = tide::with_state(pool.clone());
 
     app.with(cors);
-    app.with(user_token);
+    // app.with(user_token);
     
     path(&mut app).await;
 
-    app.listen("localhost:7004").await?;
+    app.listen("0.0.0.0:7004").await?;
 
     Ok(())
 }

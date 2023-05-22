@@ -47,7 +47,6 @@ struct DetailUser {
     id: i32,
     username: String,
     role: String,
-    token: String,
 }
 
 #[doc = "Define the login function"]
@@ -96,7 +95,6 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
             id: user.id,
             username: user.username,
             role: user.role.clone(),
-            token: token.clone(),
         };
 
         response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "auth_jwt_secret", token.clone())
