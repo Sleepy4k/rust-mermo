@@ -1,120 +1,101 @@
 use serde::Serialize;
-use tide::{Response, StatusCode};
-use tide::http::cookies::{Cookie, SameSite};
+use serde_json::{to_string, Value};
+use tide::{Response, StatusCode, http::cookies::Cookie};
 
-#[doc = "define the struct of the response"]
-#[derive(serde::Serialize)]
-struct ServiceResponse {
+#[doc = "Struct of the response"]
+#[derive(Debug, Serialize)]
+struct ResponseStruct {
     status: String,
-    info: String,
-    data: String
+    message: String,
+    data: Vec<Value>
 }
 
-#[doc = "define the struct of the response with data"]
-#[derive(serde::Serialize)]
-struct ServiceResonseData<T> {
-    status: String,
-    info: String,
-    data: Vec<T>
-}
+pub fn response_json(status: String, message: String, data: Vec<Value>) -> tide::Result<Response> {
+    // Init response
+    let mut code = StatusCode::Accepted;
+    let stats = status.to_owned().to_lowercase();
 
-#[doc = "function to create response"]
-pub fn response(status_val: &str, info_val: &str) -> tide::Result<Response> {
-    let body = ServiceResponse {
-        status: status_val.to_owned(),
-        info: info_val.to_owned(),
-        data: String::new(),
-    };
-
-    let json = serde_json::to_string(&body).unwrap();
-
-    let response = Response::builder(StatusCode::Ok)
-        .body(json)
-        .content_type("application/json")
-        .build();
-
-    Ok(response)
-}
-
-#[doc = "function to create response with data"]
-pub fn response_with_data<T: Serialize>(status_val: &str, info_val: &str, data: Vec<T>) -> tide::Result<Response> {
-    let body = ServiceResonseData {
-        status: status_val.to_owned(),
-        info: info_val.to_owned(),
-        data,
-    };
-
-    let json = serde_json::to_string(&body).unwrap();
-
-    let response = Response::builder(StatusCode::Ok)
-        .body(json)
-        .content_type("application/json")
-        .build();
-
-    Ok(response)
-}
-
-#[doc = "function to create response with cookie"]
-pub fn response_with_cookie(status_val: &str, info_val: &str, cookie_type: &str, cookie_title: &str, cookie_data: String) -> tide::Result<Response>  {
-    let response = ServiceResponse {
-        status: status_val.to_owned(),
-        info: info_val.to_owned(),
-        data: String::new(),
-    };
-
-    let json = serde_json::to_string(&response).unwrap();
-
-    let mut response = Response::new(StatusCode::Ok);
-    
-    let title = cookie_title.to_owned();
-    let data = cookie_data.to_owned();
-
-    let mut cookies = Cookie::new(title, data);
-    cookies.set_path("/");
-    cookies.set_http_only(false);
-    cookies.set_secure(true);
-    cookies.set_same_site(SameSite::Strict);
-
-    if cookie_type == "remove" {
-        response.remove_cookie(cookies);
-    } else if cookie_type == "insert" {
-        response.insert_cookie(cookies);
+    // Check status
+    if stats == "error" {
+        code = StatusCode::BadRequest;
+    } else if stats == "failed" {
+        code = StatusCode::InternalServerError;
+    } else if stats == "success" {
+        code = StatusCode::Ok;
+    } else if stats == "unauthorized" {
+        code = StatusCode::Unauthorized;
+    } else if stats == "forbidden" {
+        code = StatusCode::Forbidden;
     }
+    
+    // Init body struct
+    let body = ResponseStruct {
+        status,
+        message,
+        data
+    };
 
-    response.set_body(json);
+    // Convert body to json
+    let body_json = to_string(&body).unwrap();
+
+    // Init response
+    let mut response = Response::new(code);
+
+    // Create response
+    response.set_body(body_json);
     response.set_content_type("application/json");
 
     Ok(response)
 }
 
-#[doc = "function to create response with data and cookie"]
-pub fn response_with_data_and_cookie<T: Serialize>(status_val: &str, info_val: &str, data: Vec<T>, cookie_type: &str, cookie_title: &str, cookie_data: String) -> tide::Result<Response> {
-    let body = ServiceResonseData {
-        status: status_val.to_owned(),
-        info: info_val.to_owned(),
-        data,
+pub fn response_cookie_json(status: String, message: String, data: Vec<Value>, cookie_type: String, cookie_title: String, cookie_value: String) -> tide::Result<Response> {
+    // Init response
+    let mut code = StatusCode::Accepted;
+    let stats = status.to_owned().to_lowercase();
+
+    // Check status
+    if stats == "error" {
+        code = StatusCode::BadRequest;
+    } else if stats == "failed" {
+        code = StatusCode::InternalServerError;
+    } else if stats == "success" {
+        code = StatusCode::Ok;
+    } else if stats == "unauthorized" {
+        code = StatusCode::Unauthorized;
+    } else if stats == "forbidden" {
+        code = StatusCode::Forbidden;
+    }
+    
+    // Init body struct
+    let body = ResponseStruct {
+        status,
+        message,
+        data
     };
 
-    let json = serde_json::to_string(&body).unwrap();
+    // Convert body to json
+    let body_json = to_string(&body).unwrap();
 
-    let mut response = Response::new(StatusCode::Ok);
-    
-    let title = cookie_title.to_owned();
-    let data = cookie_data.to_owned();
+    // Init response
+    let mut response = Response::new(code);
 
-    let mut cookies = Cookie::new(title, data);
-    cookies.set_path("/");
-    cookies.set_http_only(false);
-    cookies.set_secure(true);
-    cookies.set_same_site(SameSite::Strict);
+    // Init cookie
+    let method = cookie_type.to_owned().to_lowercase();
 
-    if cookie_type == "remove" {
-        response.remove_cookie(cookies);
-    } else if cookie_type == "insert" {
-        response.insert_cookie(cookies);
+    if method == "set" {
+        let mut cookie = Cookie::new(cookie_title, cookie_value);
+        cookie.set_secure(true);
+        cookie.set_http_only(false);
+        
+        response.insert_cookie(cookie);
+    } else if method == "delete" {
+        let cookie = Cookie::named(cookie_title);
+
+        response.remove_cookie(cookie);
     }
 
-    response.set_body(json);
+    // Create response
+    response.set_body(body_json);
     response.set_content_type("application/json");
 
     Ok(response)
