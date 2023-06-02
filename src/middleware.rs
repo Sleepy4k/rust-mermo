@@ -1,10 +1,9 @@
-use std::env;
 use sqlx::PgPool;
-use std::pin::Pin;
-use std::future::Future;
 use tide::{Request, Next};
-use crate::{response, Token};
+use std::{env, pin::Pin, future::Future};
 use jsonwebtoken::{decode, Validation, DecodingKey};
+
+use crate::{helper::response::*, controller::auth::TokenStruct};
 
 pub fn user_token<'a>(
     mut request: Request<PgPool>,
@@ -23,7 +22,7 @@ pub fn user_token<'a>(
 
         match token {
             Some(token) => {
-                match decode::<Token>(
+                match decode::<TokenStruct>(
                     &token.value(),
                     &DecodingKey::from_secret(jwt_secret.as_ref()),
                     &validation,
@@ -32,19 +31,19 @@ pub fn user_token<'a>(
                         let method = request.method().to_string();
                         
                         if token_data.claims.role == "user" && path.starts_with("/user") {
-                            return response("Forbidden", "Admin only!")
+                            return response_json("forbidden".to_string(), "this route only for admins".to_string(), vec![])
                         }
 
                         if token_data.claims.role == "user" && method == "POST".to_string() && path != "/logout" {
-                            return response("Forbiden", "You Don't Have Permission")    
+                            return response_json("forbidden".to_string(), "you don't have permission for this action".to_string(), vec![])
                         }
                         
                         if token_data.claims.role == "user" && method == "PUT".to_string() {
-                            return response("Forbiden", "You Don't Have Permission")
+                            return response_json("forbidden".to_string(), "you don't have permission for this action".to_string(), vec![])
                         }
                         
                         if token_data.claims.role == "user" && method == "DELETE".to_string() {
-                            return response("Forbiden", "You Don't Have Permission")
+                            return response_json("forbidden".to_string(), "you don't have permission for this action".to_string(), vec![])
                         }
 
                         request.set_ext(token_data);
@@ -54,14 +53,14 @@ pub fn user_token<'a>(
                     Err(err) => {
                         eprintln!("Token Decode Error: {:?}", err);
 
-                        return response("Unauthorized", "Please login first")
+                        return response_json("unauthorized".to_string(), "please authorize your self as user".to_string(), vec![])
                     }
                 }
             }
             None => {
                 eprintln!("Token Not Found");
 
-                return response("Unauthorized", "Please login first")
+                return response_json("unauthorized".to_string(), "please authorize your self as user".to_string(), vec![])
             }
         }
     })

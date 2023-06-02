@@ -1,10 +1,7 @@
 use tide::Server;
 use sqlx::{Pool, Postgres};
-use crate::{
-    get_or_find_spare_part, add_spare_part, update_spare_part, delete_spare_part,
-    get_or_find_product, add_product, update_product, delete_product,
-    login, logout, register, welcome,
-};
+
+use crate::controller::*;
 
 #[doc = "Path for spare part and product"]
 pub async fn path(app: &mut Server<Pool<Postgres>>) {
