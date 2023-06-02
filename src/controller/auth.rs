@@ -1,11 +1,11 @@
-use std::env;
 use sqlx::PgPool;
 use tide::{Request, Response};
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
 use bcrypt::{hash, verify, DEFAULT_COST};
+use std::{env, time::{SystemTime, UNIX_EPOCH}};
 use jsonwebtoken::{encode, Header, EncodingKey};
-use crate::{response, response_with_cookie, response_with_data_and_cookie};
+
+use crate::helper::{response::*, parse::convert_vec_to_values};
 
 #[doc = "Define the struct for validate request body of \"login\""]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -24,7 +24,7 @@ struct RegisterRequest {
 
 #[doc = "Define the struct of the token"]
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Token {
+pub struct TokenStruct {
     pub id: i32,
     pub role: String,
     pub username: String,
@@ -59,48 +59,48 @@ pub async fn login(mut req: Request<PgPool>) -> tide::Result<Response> {
         body.username
     ).fetch_one(pool).await {
         Ok(user) => user,
-        Err(sqlx::Error::RowNotFound) => {
-            return response("ERROR", "username not found")
-        }
+        Err(sqlx::Error::RowNotFound) => {return response_json("error".to_string(), "username not found".to_string(), vec![])}
         Err(err) => {
             eprintln!("Error login: {:?}", err);
 
-            return response("Error", "something went wrong")
+            return response_json("error".to_string(), "something went wrong".to_string(), vec![])
         },
     };
 
     let password_match = verify(body.password.clone(), &user.password).unwrap_or(false);
 
-    if password_match {
-        let claims = Token {
-            id: user.id,
-            username: user.username.clone(),
-            role: user.role.clone(),
-            iat: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            exp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .saturating_add(60 * 60),
-        };
+    if !password_match {
+        return response_json("error".to_string(), "password not match".to_string(), vec![])
+    }
 
-        let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
-        let key = EncodingKey::from_secret(jwt_secret.as_ref());
-        let token = encode(&Header::default(), &claims, &key)?;
+    let claims = TokenStruct {
+        id: user.id,
+        username: user.username.clone(),
+        role: user.role.clone(),
+        iat: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+        exp: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .saturating_add(60 * 60),
+    };
 
-        let detail_user = DetailUser {
+    let jwt_secret = env::var("JWT_SECRET").unwrap_or(String::from("secret"));
+    let key = EncodingKey::from_secret(jwt_secret.as_ref());
+    let token = encode(&Header::default(), &claims, &key)?;
+
+    let detail_user = convert_vec_to_values(vec![
+        DetailUser {
             id: user.id,
             username: user.username,
             role: user.role.clone(),
-        };
+        }
+    ]);
 
-        response_with_data_and_cookie("OK", "berhasil login", vec![detail_user], "insert", "auth_jwt_secret", token.clone())
-    } else {
-        response("ERROR", "password not match")
-    }
+    response_cookie_json("success".to_string(), "login success".to_string(), detail_user, "set".to_string(), "auth_jwt_secret".to_string(), token.clone())
 }
 
 #[doc = "function to register user"]
@@ -114,7 +114,7 @@ pub async fn register(mut req: Request<PgPool>) -> tide::Result<Response> {
     ).fetch_optional(pool).await?;
 
     if user_check.is_some() {
-        return response("ERROR", "username already exists");
+        return response_json("error".to_string(), "username already exists".to_string(), vec![]);
     }
 
     let hashed_password = hash(body.password, DEFAULT_COST)?;
@@ -123,15 +123,15 @@ pub async fn register(mut req: Request<PgPool>) -> tide::Result<Response> {
         "insert into client (username, password, role) values ($1, $2, $3)",
         body.username, hashed_password, body.role
     ).execute(pool).await {
-        Ok(_) => {response("OK", "berhasil signup")},
+        Ok(_) => {response_json("success".to_string(), "signup success".to_string(), vec![])},
         Err(e) => {
             eprintln!("Error register: {}", e);
 
-            response("ERROR", "failed to signup")
+            response_json("error".to_string(), "failed to signup".to_string(), vec![])
         }
     }
 }
 
 pub async fn logout(_req: Request<PgPool>) -> tide::Result<Response> {
-    response_with_cookie("OK", "berhasil logout", "remove", "auth_jwt_secret", String::from(""))
+    response_cookie_json("success".to_string(), "logout success".to_string(), vec![], "delete".to_string(), "auth_jwt_secret".to_string(), String::from(""))
 }
